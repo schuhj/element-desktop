@@ -7,6 +7,9 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import { platform } from "node:os";
+import fs from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
 
 import { test, expect } from "../../element-desktop-test.js";
 
@@ -66,5 +69,35 @@ test.describe("App launch", () => {
         test.skip("should respect option", async ({ page, stdout }) => {
             expect(stdout.data.toString()).toContain("Auto update disabled via command line flag");
         });
+    });
+});
+
+const tmpDirEnv = path.join(
+    path.join(os.tmpdir(), "element-desktop-tests-env-" + Math.random().toString(36).substring(2, 8)),
+);
+
+test.describe("ELEMENT_PROFILE_DIR", () => {
+    test.slow();
+
+    test.beforeEach(async () => {
+        await fs.mkdir(tmpDirEnv);
+    });
+
+    // Fails on Windows
+    //test.afterEach(async () => {
+    //    await fs.rm(tmpDirEnv, { recursive: true });
+    //});
+
+    test.use({
+        extraEnv: {
+            ELEMENT_PROFILE_DIR: tmpDirEnv,
+        },
+    });
+
+    test("should use ELEMENT_PROFILE_DIR as userData path", async ({ page }) => {
+        await page.locator("#matrixchat").waitFor();
+        await page.locator(".mx_Welcome").waitFor();
+        const files = await fs.readdir(tmpDirEnv);
+        expect(files.length).toBeGreaterThan(0);
     });
 });
